@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="data:,"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROMPT STUDIO — Chat IDE</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#0b0f18;color:#e6edf3;height:100vh;display:flex;flex-direction:column}
+header{background:#0e1420;border-bottom:1px solid #1c263a;padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#a855f7,#ec4899);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
+h1{font-size:17px;margin:0}h1 small{color:#8b93a7;font-size:10px;display:block;letter-spacing:1px}
+.hint{color:#6b7489;font-size:12px}
+main{display:flex;flex:1;overflow:hidden}
+aside{width:220px;background:#0a0e16;border-right:1px solid #1c263a;display:flex;flex-direction:column}
+aside h2{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#8b93a7;padding:14px 14px 8px;margin:0}
+.list{flex:1;overflow:auto;padding:0 6px}
+.prompt-item{padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:3px;color:#9aa5b5;transition:.12s;position:relative;display:flex;justify-content:space-between;align-items:center}
+.prompt-item:hover{background:#141a2a;color:#e6edf3}
+.prompt-item.active{background:#1a1f35;color:#a855f7;font-weight:600}
+.prompt-item .del{opacity:0;font-size:11px;color:#8b93a7;background:none;border:none;cursor:pointer;padding:2px}
+.prompt-item:hover .del{opacity:1}
+.add-bar{padding:8px;border-top:1px solid #1c263a}
+.add-bar input{width:100%;background:#141a2a;border:1px solid #1c263a;border-radius:7px;color:#e6edf3;padding:7px 10px;font-size:12px}
+.add-bar input:focus{outline:none;border-color:#a855f7}
+.center{flex:1;display:flex;flex-direction:column;min-width:0}
+.toolbar{padding:10px 16px;background:#0e1420;border-bottom:1px solid #1c263a;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toolbar button{background:#1c243a;border:1px solid #283650;color:#e6edf3;font-weight:600;border-radius:7px;padding:7px 12px;cursor:pointer;font-size:12px;transition:.12s}
+.toolbar button:hover{background:#283650;border-color:#a855f7}
+.toolbar button.primary{background:linear-gradient(135deg,#a855f7,#ec4899);border-color:#a855f7;color:#fff}
+.editor-wrap{flex:1;padding:0;display:flex;flex-direction:column}
+#editor{flex:1;width:100%;background:#0b0f18;border:none;color:#d5ddee;font-family:ui-monospace,Menlo,monospace;font-size:13px;padding:16px;resize:none;line-height:1.6}
+#editor:focus{outline:none}
+.vars{padding:10px 16px;background:#0e1420;border-top:1px solid #1c263a}
+.vars h3{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#a855f7}
+.var-row{display:flex;gap:6px;margin-bottom:4px;align-items:center}
+.var-row input{background:#141a2a;border:1px solid #1c263a;border-radius:6px;color:#e6edf3;padding:5px 8px;font-size:12px;flex:1}
+.var-row input:focus{outline:none;border-color:#a855f7}
+.var-row button{background:none;border:1px solid #283650;color:#8b93a7;border-radius:6px;padding:5px 8px;cursor:pointer;font-size:11px}
+.var-row button:hover{border-color:#a855f7;color:#a855f7}
+.preview-pane{width:340px;background:#0a0e16;border-left:1px solid #1c263a;display:flex;flex-direction:column;flex-shrink:0}
+.preview-pane h2{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#8b93a7;padding:14px 14px 8px;margin:0}
+#preview{flex:1;padding:14px;overflow:auto;font-size:13px;line-height:1.7;white-space:pre-wrap;word-wrap:break-word;font-family:ui-monospace,Menlo,monospace;color:#a8d0a8}
+.preview-bar{padding:10px 14px;border-top:1px solid #1c263a}
+.preview-bar button{width:100%;background:#1c243a;border:1px solid #283650;color:#e6edf3;border-radius:7px;padding:7px;cursor:pointer;font-size:12px;font-weight:600}
+.preview-bar button:hover{background:#283650}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#283650;color:#e6edf3;padding:8px 18px;border-radius:20px;font-size:12px;z-index:999;opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:1}
+@media(max-width:900px){.preview-pane{display:none}aside{width:170px}}
+</style></head>
+<body>
+<header><div class="logo">PS</div><h1>PROMPT STUDIO<small>CHAT IDE</small></h1>
+<span class="hint" id="status">New prompt</span></header>
+<main>
+<aside>
+<h2>Prompts <button id="newPrompt" style="background:none;border:none;color:#a855f7;cursor:pointer;font-size:18px;vertical-align:middle">+</button></h2>
+<div class="list" id="promptList"></div>
+</aside>
+<div class="center">
+<div class="toolbar">
+<button class="primary" id="exportBtn">📋 Copy Output</button>
+<button id="clearBtn">Clear Editor</button>
+<span class="hint" id="charCount">0 chars</span>
+</div>
+<div class="editor-wrap"><textarea id="editor" placeholder="Write your prompt here…
+
+Use {{variable_name}} for dynamic placeholders. Add variables in the panel below."></textarea></div>
+<div class="vars">
+<h3>Variables</h3>
+<div id="varList"></div>
+<button style="background:none;border:1px dashed #283650;color:#8b93a7;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;margin-top:4px" id="addVarBtn">+ Add Variable</button>
+</div>
+</div>
+<div class="preview-pane">
+<h2>Live Output Preview</h2>
+<div id="preview"></div>
+<div class="preview-bar"><button id="copyBtn">📋 Copy to Clipboard</button></div>
+</div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const store=()=>{try{return JSON.parse(localStorage.getItem('ps_data'))||{prompts:[],vars:[]}}catch{return{prompts:[],vars:[]}}};
+const save=s=>localStorage.setItem('ps_data',JSON.stringify(s));
+let data=store();
+let activeIdx=0;
+if(!data.prompts.length){data.prompts=[{name:'Untitled Prompt',content:'You are {{name}}, a {{role}}.\n\nTask: {{task}}',created:Date.now()}];data.vars=[{key:'name',val:'Alice'},{key:'role',val:'assistant'},{key:'task',val:'summarize the following text'}];save(data);}
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+function renderList(){
+  $('promptList').innerHTML=data.prompts.map((p,i)=>`<div class="prompt-item${i===activeIdx?' active':''}" data-idx="${i}">
+<span>${esc(p.name)}</span>
+<button class="del" data-idx="${i}" title="Delete">✕</button>
+</div>`).join('');
+  if(data.prompts[activeIdx])$('status').textContent=data.prompts[activeIdx].name;
+}
+
+function loadPrompt(idx){
+  if(idx<0||idx>=data.prompts.length)return;
+  activeIdx=idx;
+  $('editor').value=data.prompts[idx].content||'';
+  renderList();updatePreview();
+}
+
+function renderVars(){
+  $('varList').innerHTML=data.vars.map((v,i)=>`<div class="var-row">
+<input class="vk" data-i="${i}" value="${esc(v.key)}" placeholder="key">
+<input class="vv" data-i="${i}" value="${esc(v.val)}" placeholder="value">
+<button data-i="${i}" class="vdel">✕</button>
+</div>`).join('');
+}
+
+function updatePreview(){
+  let out=$('editor').value;
+  data.vars.forEach(v=>{out=out.replaceAll('{{'+v.key+'}}',v.val);});
+  $('preview').textContent=out;
+  $('charCount').textContent=out.length+' chars';
+}
+
+function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2000);}
+
+$('editor').addEventListener('input',()=>{
+  if(data.prompts[activeIdx]){data.prompts[activeIdx].content=$('editor').value;save(data);}
+  updatePreview();
+});
+
+$('varList').addEventListener('input',e=>{
+  const i=+e.target.dataset.i;if(isNaN(i))return;
+  if(e.target.classList.contains('vk'))data.vars[i].key=e.target.value;
+  else if(e.target.classList.contains('vv'))data.vars[i].val=e.target.value;
+  save(data);updatePreview();
+});
+
+$('varList').onclick=e=>{
+  const btn=e.target.closest('.vdel');if(!btn)return;
+  data.vars.splice(+btn.dataset.i,1);save(data);renderVars();updatePreview();
+};
+
+$('addVarBtn').onclick=()=>{data.vars.push({key:'',val:''});save(data);renderVars();};
+
+$('newPrompt').onclick=()=>{
+  data.prompts.push({name:'Prompt '+(data.prompts.length+1),content:'',created:Date.now()});
+  save(data);loadPrompt(data.prompts.length-1);
+};
+
+$('promptList').onclick=e=>{
+  const del=e.target.closest('.del');
+  if(del){if(data.prompts.length>1&&confirm('Delete prompt?')){data.prompts.splice(+del.dataset.idx,1);if(activeIdx>=data.prompts.length)activeIdx=data.prompts.length-1;save(data);renderList();loadPrompt(activeIdx);}return;}
+  const item=e.target.closest('.prompt-item');
+  if(item){loadPrompt(+item.dataset.idx);}
+};
+
+$('clearBtn').onclick=()=>{$('editor').value='';if(data.prompts[activeIdx])data.prompts[activeIdx].content='';save(data);updatePreview();};
+$('copyBtn').onclick=()=>{navigator.clipboard.writeText($('preview').textContent).then(()=>toast('Copied!'));};
+$('exportBtn').onclick=$('copyBtn').onclick;
+window.addEventListener('dblclick',e=>{
+  if(e.target.classList.contains('prompt-item')){const idx=+e.target.dataset.idx;const n=prompt('Rename prompt:',data.prompts[idx].name);if(n&&n.trim()){data.prompts[idx].name=n.trim();save(data);renderList();}}
+});
+renderList();loadPrompt(0);renderVars();updatePreview();
+</script>
+</body></html>
